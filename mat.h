@@ -1,0 +1,422 @@
+#ifndef MAT_H_
+#define MAT_H_
+
+#include <stddef.h>
+#include <stdio.h>
+#include <math.h>
+
+#ifndef MAT_MALLOC
+#include <stdlib.h>
+#define MAT_MALLOC malloc
+#endif 
+
+#ifndef MAT_ASSERT
+#include <assert.h>
+#define MAT_ASSERT assert
+#endif 
+/*
+    Strucutre for matrix allocation    
+*/
+typedef struct {
+    size_t rows;
+    size_t cols;
+    size_t stride;
+    size_t ref_count;
+    float *es; // pointer to a continuos numbers of floats allocated with mat_alloc
+} Mat;
+
+#define MAT_AT(m, i, j) (m).es[(i) * (m).stride + (j)] // Wrap everty parameter in paranthesis in case there is some complex expression like 'i+1'
+                                                     // using stride to select only a given number of columns
+#define ARRAY_LEN(xs) sizeof(xs)/sizeof(xs[0])
+
+
+float float_rand(void);
+
+Mat mat_alloc(size_t rows, size_t cols);
+void mat_retain(Mat *m);
+void mat_release(Mat *m);
+void mat_free(Mat *m);
+void mat_fill(Mat m, float n);
+void mat_rand(Mat m, float low, float high);
+Mat mat_row(Mat m, size_t row);
+void mat_copy(Mat dst, Mat src);
+void mat_dot(Mat dst, Mat a, Mat b);
+void mat_sum(Mat dst, Mat a);
+void mat_nsum(Mat dst, Mat a);
+void mat_sig(Mat m);
+void mat_print(Mat m, const char* name, size_t padding);
+void mat_prod_const(Mat dst, float mult);
+void mat_div_const(Mat dst, float div);
+void mat_sum_const(Mat dst, float add);
+void mat_exp(Mat dst, float exp);
+void mat_zeros(Mat dst);
+void mat_ones(Mat dst);
+
+Mat mat_col_sum(Mat m);
+Mat mat_row_sum(Mat m);
+Mat mat_SS(Mat a, Mat b);
+Mat mat_SS_const(Mat a, float x);
+Mat mat_trans(Mat m);
+Mat mat_row_mean(Mat m);
+Mat mat_col_mean(Mat m);
+
+
+#define MAT_PRINT(m) mat_print(m, #m, 0) // thiQs basically define a alias to which the first argument is the one given
+                                      // while the second is the the one given stringified
+#endif
+
+
+#ifdef MAT_IMPLEMENTATION
+/* ============= UTILS ============= */
+float rand_float(void) {
+    return(float) rand() / RAND_MAX;
+}
+
+float sigmoidf(float n) {
+    return 1.f/(1.f+expf(-n));
+}
+
+/* ============= MAIN ============= */
+
+/*
+    Define a "malloc" cousin for memory allocation
+*/
+Mat mat_alloc(size_t rows, size_t cols){
+    Mat m;
+    m.rows = rows;
+    m.cols = cols;
+    m.stride = cols;
+    m.ref_count = 1;
+    m.es = MAT_MALLOC(sizeof(m.es) * rows * cols);
+    MAT_ASSERT(m.es != NULL);
+
+    return m;
+} 
+
+/*
+    Define a "retain" cousin for increasing 'ref_count'.
+*/
+void mat_retain(Mat *m) {
+    m -> ref_count ++;
+}
+
+/*
+    Define a "release" cousin for releasing the  'ref_count' and freeing it from memory if it hit 0
+*/
+void mat_release(Mat *m){
+    assert(m->ref_count > 0);
+    m -> ref_count --;
+    if (m -> ref_count == 0) mat_free(m);
+}
+
+/*
+    Define a "free" cousin for clearing the memory once the counter 'ref_count' reaches 0;
+*/
+void mat_free(Mat *m){
+    if (!m) return;
+    m->rows = 0;
+    m->cols = 0;
+    m->stride = 0;
+    m->ref_count = 0;
+    if (m->es) {
+        free(m->es);
+        m->es = NULL;
+    }
+} 
+
+/*
+    Randomize the matrix with values from 'low' to 'high'.
+*/
+void mat_rand(Mat m, float low, float high) {
+    for (size_t i = 0; i<m.rows; ++i) {
+        for (size_t j = 0; j<m.cols; ++j) {
+            MAT_AT(m, i, j) = rand_float() * (high - low) + low;
+        }
+    }    
+}
+/*
+    Fill the whole matrix with the value 'n'.
+*/
+void mat_fill(Mat m, float n) {
+    for (size_t i = 0; i<m.rows; ++i) {
+        for (size_t j = 0; j<m.cols; ++j) {
+            MAT_AT(m, i, j) = n;
+        }
+    }    
+}
+
+/*
+    Extract the row corresponding to the index 'row' from the matrix
+*/
+Mat mat_row(Mat m, size_t row) {
+
+    MAT_ASSERT(row <= m.rows);
+
+    return (Mat) {
+        .rows = 1,
+        .cols = m.cols,
+        .stride = m.stride,
+        .es = &MAT_AT(m, row, 0),
+    };
+}
+
+/*
+    Copy all of the matrix 'src' values to the 'dst' matrix in place. Both with the same dimensions.
+*/
+void mat_copy(Mat dst, Mat src) {
+
+    MAT_ASSERT(dst.rows == src.rows);
+    MAT_ASSERT(dst.cols == src.cols);
+
+    for(size_t i = 0; i< dst.rows; ++i) {
+        for(size_t j = 0; j< dst.cols; ++j) {
+            MAT_AT(dst, i, j) = MAT_AT(src, i, j);
+        }
+    }
+}
+
+/*
+    Set all values of matrix 'dst' to zero.
+*/
+void mat_zeros(Mat dst) {
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) = 0;
+        }
+    }    
+}
+
+
+/*
+    Set all values of matrix 'dst' to zero.
+*/
+void mat_ones(Mat dst) {
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) = 1;
+        }
+    }       
+}
+/* ============= MATH BASIC OPERATIONS ============= */
+/*
+    Sum the values with the same entry indexes across matrixes 'dst' and 'a' with the same dimensions. In place operation.
+*/
+void mat_sum(Mat dst, Mat a) {
+    MAT_ASSERT(dst.rows == a.rows);
+    MAT_ASSERT(dst.cols == a.cols);
+
+    for (size_t i = 0; i<a.rows; ++i) {
+        for (size_t j = 0; j<a.cols; ++j) {
+            MAT_AT(dst, i, j) += MAT_AT(a, i, j);
+        }
+    }    
+    
+}
+
+/*
+    Subtract the values with the same entry given 'dst' and 'a', two matrix with same dimensions. In place operation.
+    The same result can be achieved by using:
+
+    <mat_sum(dst, mat_prod_const(a, -1))> 
+*/
+void mat_nsum(Mat dst, Mat a) {
+    MAT_ASSERT(dst.rows == a.rows);
+    MAT_ASSERT(dst.cols == a.cols);
+
+    for (size_t i = 0; i<a.rows; ++i) {
+        for (size_t j = 0; j<a.cols; ++j) {
+            MAT_AT(dst, i, j) -= MAT_AT(a, i, j);
+        }
+    }    
+    
+}
+
+/*
+    Sum a constant 'add' to all entries of matrix 'dst' in place.
+    If subtraction is needed use a negative value as 'add'
+*/
+void mat_sum_const(Mat dst, float add) {
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) += add;
+        }
+    }    
+    
+}
+
+/*
+    Multiply a constant 'mult' to all entries of matrix 'dst' in place.
+*/
+void mat_prod_const(Mat dst, float mult) {
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) *= mult;
+        }
+    }    
+}
+
+/*
+    Divide a constant 'mult' to all entries of matrix 'dst' in place.
+*/
+void mat_div_const(Mat dst, float div) {
+    MAT_ASSERT(div!=0.0);
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) /= div;
+        }
+    }    
+}
+
+/*
+    Raise to a constant exponent 'exp' all entries of matrix 'dst' in place.
+*/
+void mat_exp(Mat dst, float exp) {
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) = powf(MAT_AT(dst, i, j), exp);
+        }
+    }    
+}
+
+/*
+    Compute the sigmoid function for all the values in the matrix 'm' in place.
+*/
+void mat_sig(Mat m) {
+    for (size_t i = 0; i<m.rows; ++i) {
+        for (size_t j = 0; j<m.cols; ++j) {
+            MAT_AT(m, i, j) = sigmoidf(MAT_AT(m, i, j));
+        }
+    }
+}
+
+/* ============= ADVANCED MATH OPERATIONS ============= */
+/*
+    Compute matrix dot product in place.
+*/
+void mat_dot(Mat dst, Mat a, Mat b) {
+    
+    MAT_ASSERT(a.cols == b.rows);
+    size_t n = a.cols;
+    MAT_ASSERT(dst.rows == a.rows);
+    MAT_ASSERT(dst.cols == b.cols);
+
+    for (size_t i = 0; i<dst.rows; ++i) {
+        for (size_t j = 0; j<dst.cols; ++j) {
+            MAT_AT(dst, i, j) = 0;
+            for (size_t k = 0; k< n; ++k) {
+                // Multiple each item of a row belonging to matrix 'a' with each item belonging to column 'b'
+                // Sum the results to get the item in the new matrix.
+                MAT_AT(dst, i, j) += MAT_AT(a, i, k)*MAT_AT(b, k, j);
+            }
+        }
+    }    
+    
+}
+
+/*
+    Compute the transpose of matrix 'm'. Basically inverting indexes between rows and cols.
+*/
+Mat mat_trans(Mat m) {
+    Mat o = mat_alloc(m.cols, m.rows);
+
+    for (size_t i = 0; i<m.rows; ++i) {
+        for (size_t j = 0; j<m.cols; ++j) {
+            MAT_AT(o, j, i) = MAT_AT(m, i, j);
+        }
+    }
+    return o;
+}
+
+/*
+    A function that prints the strucutre of the matrix as usually represented in math textbooks.
+*/
+void mat_print(Mat m, const char *name, size_t padding) {
+    printf("%*s%s = [\n", (int) padding, "", name);
+    for (size_t i = 0; i<m.rows; ++i) {
+        printf("%*s    ", (int) padding, "");
+        for (size_t j = 0; j<m.cols; ++j) {
+            printf("%f ", MAT_AT(m, i, j));
+        }
+        printf("\n");
+    }
+    printf("%*s]\n", (int) padding, "");
+}
+
+
+
+/* 
+    Given two matrices of the same size 'a' and 'b', return the Residual Sum Squared (RSS)
+*/
+Mat mat_SS(Mat a, Mat b){
+    mat_nsum(a, b);
+    mat_exp(a, 2);
+    Mat o =mat_row_sum(a);
+
+    return o;
+}
+
+/* 
+    Given one matrix 'a' and one constant 'x', return the Residual Sum Squared (RSS) w.r.t. a given constant
+*/
+Mat mat_SS_const(Mat a, float x){
+    mat_sum_const(a, -x);
+    mat_exp(a, 2);
+    Mat o =mat_row_sum(a);
+
+    return o;
+}
+
+/*
+    from RxC to 1xC for each col, sum across all rows.
+*/
+Mat mat_col_sum(Mat m) {
+    Mat col_m = mat_alloc(1, m.cols);
+
+    for (size_t j = 0; j < m.cols; j++){
+        float temp = 0.0;
+        for (size_t i = 0; i < m.rows; i ++){
+            temp += MAT_AT(m, i, j);
+        }
+        MAT_AT(col_m, 0, j) = temp;
+    }
+
+    return col_m;
+}
+
+/*
+    from RxC to 1xR for each row, sum across all cols.
+*/
+Mat mat_row_sum(Mat m) {
+    Mat row_m = mat_alloc(1, m.rows);
+
+    for (size_t i = 0; i < m.rows; i ++){
+        float temp = 0.0;
+        for (size_t j = 0; j < m.cols; j++){
+            temp += MAT_AT(m, i, j);
+        }
+        MAT_AT(row_m, 0, i) = temp;
+    }
+    return row_m;
+}
+
+/*
+    Mean of each row.
+*/
+Mat mat_row_mean(Mat m){
+    Mat o = mat_row_sum(m);
+    assert(m.rows != 0);
+    mat_div_const(o, m.cols);
+    return o;
+}
+
+/*
+    Mean of each col
+*/
+Mat mat_col_mean(Mat m){
+    Mat o = mat_col_sum(m);
+    assert(m.rows != 0);
+    mat_div_const(o, m.rows);
+    return o;
+}
+
+#endif
