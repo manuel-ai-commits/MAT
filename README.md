@@ -7,7 +7,8 @@ I am learning C! This is one of my first libraries to contribute to Machine Lear
 Single-header C matrix library for ML/AI work.
 
 ## Usage
-
+Very simple example
+```
 #define MAT_IMPLEMENTATION
 #include "mat.h"
 
@@ -24,6 +25,7 @@ int main() {
     mat_release(&result);
     return 0;
 }Compile: `gcc -o program mat.c -lm`
+```
 
 ## Core Functions
 
