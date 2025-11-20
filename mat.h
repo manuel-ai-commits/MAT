@@ -40,6 +40,8 @@ void mat_fill(Mat m, float n);
 void mat_fill_diag(Mat m, float n);
 void mat_rand(Mat m, float low, float high);
 Mat mat_row(Mat m, size_t row);
+Mat *mat_split_rows(Mat m, float x);
+Mat *mat_split_cols(Mat m, float x);
 void mat_copy(Mat dst, Mat src);
 void mat_dot(Mat dst, Mat a, Mat b);
 void mat_sum(Mat dst, Mat a);
@@ -105,7 +107,7 @@ void mat_retain(Mat *m) {
     Define a "release" cousin for releasing the  'ref_count' and freeing it from memory if it hit 0
 */
 void mat_release(Mat *m){
-    assert(m->ref_count > 0);
+    MAT_ASSERT(m->ref_count > 0);
     m -> ref_count --;
     if (m -> ref_count == 0) mat_free(m);
 }
@@ -150,7 +152,7 @@ void mat_fill(Mat m, float n) {
     Fill the diagonal of the matrix 'm' with the value 'n'.
 */
 void mat_fill_diag(Mat m, float n) {
-    assert(m.rows == m.cols);
+    MAT_ASSERT(m.rows == m.cols);
     for (size_t i = 0; i<m.rows; ++i) {
         MAT_AT(m, i, i) = n;
     }    
@@ -301,6 +303,59 @@ void mat_sig(Mat m) {
     }
 }
 
+Mat *mat_split_rows(Mat m, float x){
+    MAT_ASSERT(0.0 < x && x < 1.0);
+    MAT_ASSERT(m.rows > 1);
+    
+
+    size_t size_1st = (size_t)m.rows*x;
+    size_t size_2nd = (size_t)m.rows - size_1st;
+    printf("Size of first split: %zu\n", size_1st);
+    printf("Size of second split: %zu\n", size_2nd);
+    Mat m_1st = mat_alloc(size_1st, m.cols);
+    Mat m_2nd = mat_alloc(size_2nd, m.cols);
+    Mat *out = MAT_MALLOC(2 * sizeof(Mat));
+
+    for(size_t i = 0; i < size_1st; i++){
+        for(size_t j = 0; j < m.cols; j++){
+            MAT_AT(m_1st,i,j) = MAT_AT(m,i,j);
+        }
+    }
+
+    for(size_t i = size_1st; i < m.rows; i++){
+        for(size_t j = 0; j < m.cols; j++){
+            MAT_AT(m_2nd,i - size_1st,j) = MAT_AT(m,i,j);
+        }
+    }
+    out[0] = m_1st;
+    out[1] = m_2nd;
+    return out;
+}
+
+Mat *mat_split_cols(Mat m, float x){
+    MAT_ASSERT(0.0 < x && x < 1.0);
+    MAT_ASSERT(m.cols > 1);
+    size_t size_1st = (size_t)m.cols*x;
+    size_t size_2nd = (size_t)m.cols - size_1st;
+    Mat m_1st = mat_alloc(m.rows, size_1st);
+    Mat m_2nd = mat_alloc(m.rows, size_2nd);
+    Mat *out = MAT_MALLOC(2 * sizeof(Mat));
+
+    for(size_t i = 0; i < m.rows; i++){
+        for(size_t j = 0; j < size_1st; j++){
+            MAT_AT(m_1st,i,j) = MAT_AT(m,i,j);
+        }
+    }
+
+    for(size_t i = 0; i < m.rows; i++){
+        for(size_t j = size_1st; j < m.cols; j++){
+            MAT_AT(m_2nd,i,j-size_1st) = MAT_AT(m,i,j);
+        }
+    }
+    out[0] = m_1st;
+    out[1] = m_2nd;
+    return out;
+}
 /* ============= ADVANCED MATH OPERATIONS ============= */
 /*
     Compute matrix dot product in place.
@@ -420,7 +475,7 @@ Mat mat_row_sum(Mat m) {
 */
 Mat mat_row_mean(Mat m){
     Mat o = mat_row_sum(m);
-    assert(m.rows != 0);
+    MAT_ASSERT(m.rows != 0);
     mat_div_const(o, m.cols);
     return o;
 }
@@ -430,7 +485,7 @@ Mat mat_row_mean(Mat m){
 */
 Mat mat_col_mean(Mat m){
     Mat o = mat_col_sum(m);
-    assert(m.rows != 0);
+    MAT_ASSERT(m.rows != 0);
     mat_div_const(o, m.rows);
     return o;
 }

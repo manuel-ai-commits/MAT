@@ -24,7 +24,12 @@ int main () {
     MAT_PRINT(m_row);
     Mat m_col = mat_col_mean(m);
     MAT_PRINT(m_col);
-
+    Mat *out_row = mat_split_rows(m, 0.7);
+    MAT_PRINT(out_row[0]);
+    MAT_PRINT(out_row[1]);
+    Mat *out_col = mat_split_cols(m, 0.7);
+    MAT_PRINT(out_col[0]);
+    MAT_PRINT(out_col[1]);
     // This will also free
     mat_release(&m);
 
