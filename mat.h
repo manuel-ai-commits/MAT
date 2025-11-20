@@ -37,6 +37,7 @@ void mat_retain(Mat *m);
 void mat_release(Mat *m);
 void mat_free(Mat *m);
 void mat_fill(Mat m, float n);
+void mat_fill_diag(Mat m, float n);
 void mat_rand(Mat m, float low, float high);
 Mat mat_row(Mat m, size_t row);
 void mat_copy(Mat dst, Mat src);
@@ -144,6 +145,17 @@ void mat_fill(Mat m, float n) {
         }
     }    
 }
+
+/*
+    Fill the diagonal of the matrix 'm' with the value 'n'.
+*/
+void mat_fill_diag(Mat m, float n) {
+    assert(m.rows == m.cols);
+    for (size_t i = 0; i<m.rows; ++i) {
+        MAT_AT(m, i, i) = n;
+    }    
+}
+
 
 /*
     Extract the row corresponding to the index 'row' from the matrix
@@ -348,10 +360,12 @@ void mat_print(Mat m, const char *name, size_t padding) {
     Given two matrices of the same size 'a' and 'b', return the Residual Sum Squared (RSS)
 */
 Mat mat_SS(Mat a, Mat b){
-    mat_nsum(a, b);
-    mat_exp(a, 2);
-    Mat o =mat_row_sum(a);
-
+    Mat res = mat_alloc(a.rows, a.cols);
+    mat_copy(res, a);
+    mat_nsum(res, b);
+    mat_exp(res, 2);
+    Mat o =mat_row_sum(res);
+    mat_release(&res);
     return o;
 }
 
@@ -359,10 +373,12 @@ Mat mat_SS(Mat a, Mat b){
     Given one matrix 'a' and one constant 'x', return the Residual Sum Squared (RSS) w.r.t. a given constant
 */
 Mat mat_SS_const(Mat a, float x){
-    mat_sum_const(a, -x);
-    mat_exp(a, 2);
-    Mat o =mat_row_sum(a);
-
+    Mat res = mat_alloc(a.rows, a.cols);
+    mat_copy(res, a);
+    mat_sum_const(res, -x);
+    mat_exp(res, 2);
+    Mat o =mat_row_sum(res);
+    mat_release(&res);
     return o;
 }
 
