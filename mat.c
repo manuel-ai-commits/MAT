@@ -31,7 +31,15 @@ int main () {
     MAT_PRINT(out_col[0]);
     MAT_PRINT(out_col[1]);
     // This will also free
+    Mat b = mat_alloc(ROWS, COLS);
+    mat_zeros(b);
+    Mat m_app_r = mat_append_rows(m, b);
+    MAT_PRINT(m_app_r);
+    Mat m_app_c = mat_append_cols(m, b);
+    MAT_PRINT(m_app_c);
+
     mat_release(&m);
+    mat_release(&m_app_r);
 
     return 0;
 }

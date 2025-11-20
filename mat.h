@@ -55,6 +55,8 @@ void mat_exp(Mat dst, float exp);
 void mat_zeros(Mat dst);
 void mat_ones(Mat dst);
 
+Mat mat_append_rows(Mat a, Mat b);
+Mat mat_append_cols(Mat a, Mat b);
 Mat mat_col_sum(Mat m);
 Mat mat_row_sum(Mat m);
 Mat mat_SS(Mat a, Mat b);
@@ -303,6 +305,9 @@ void mat_sig(Mat m) {
     }
 }
 
+/*
+    Split the matrix in two by rows
+*/
 Mat *mat_split_rows(Mat m, float x){
     MAT_ASSERT(0.0 < x && x < 1.0);
     MAT_ASSERT(m.rows > 1);
@@ -330,6 +335,9 @@ Mat *mat_split_rows(Mat m, float x){
     return out;
 }
 
+/*
+    Split the matrix in two by cols
+*/
 Mat *mat_split_cols(Mat m, float x){
     MAT_ASSERT(0.0 < x && x < 1.0);
     MAT_ASSERT(m.cols > 1);
@@ -352,6 +360,52 @@ Mat *mat_split_cols(Mat m, float x){
     }
     out[0] = m_1st;
     out[1] = m_2nd;
+    return out;
+}
+
+/*
+    It appends one matrix to another having the same cols
+*/
+Mat mat_append_rows(Mat a, Mat b){
+    assert(a.cols == b.cols);
+    size_t rows = a.rows + b.rows;
+    size_t cols = a.cols;
+    Mat out = mat_alloc(rows, cols);
+
+    for(size_t i = 0; i < a.rows; i++){
+        for(size_t j = 0; j < cols; j++){
+            MAT_AT(out,i,j) = MAT_AT(a,i,j);
+        }
+    }
+    
+    for(size_t i = 0; i < b.rows; i++){
+        for(size_t j = 0; j < cols; j++){
+            MAT_AT(out,i+a.rows,j) = MAT_AT(b,i,j);
+        }
+    }
+    return out;
+}
+
+/*
+    It appends one matrix to another having the same rows
+*/
+Mat mat_append_cols(Mat a, Mat b){
+    assert(a.rows == b.rows);
+    size_t rows = a.rows;
+    size_t cols = a.cols + b.cols;
+    Mat out = mat_alloc(rows, cols);
+
+    for(size_t i = 0; i < rows; i++){
+        for(size_t j = 0; j < a.cols; j++){
+            MAT_AT(out,i,j) = MAT_AT(a,i,j);
+        }
+    }
+    
+    for(size_t i = 0; i < rows; i++){
+        for(size_t j = 0; j < b.cols; j++){
+            MAT_AT(out,i,j+a.cols) = MAT_AT(b,i,j);
+        }
+    }
     return out;
 }
 /* ============= ADVANCED MATH OPERATIONS ============= */
@@ -487,5 +541,9 @@ Mat mat_col_mean(Mat m){
     mat_div_const(o, m.rows);
     return o;
 }
+
+// void mat_inverse_GJ(Mat m){
+
+// }
 
 #endif
