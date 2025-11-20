@@ -310,8 +310,6 @@ Mat *mat_split_rows(Mat m, float x){
 
     size_t size_1st = (size_t)m.rows*x;
     size_t size_2nd = (size_t)m.rows - size_1st;
-    printf("Size of first split: %zu\n", size_1st);
-    printf("Size of second split: %zu\n", size_2nd);
     Mat m_1st = mat_alloc(size_1st, m.cols);
     Mat m_2nd = mat_alloc(size_2nd, m.cols);
     Mat *out = MAT_MALLOC(2 * sizeof(Mat));
