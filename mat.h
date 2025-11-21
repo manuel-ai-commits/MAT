@@ -41,6 +41,20 @@ void mat_fill(Mat *m, float n);
 void mat_fill_diag(Mat *m, float n);
 void mat_rand(Mat *m, float low, float high);
 Mat mat_row(const Mat *m, size_t row);
+void mat_row_sum_const(Mat *m, size_t row, float val);
+void mat_col_sum_const(Mat *m, size_t col, float val);
+void mat_row_div_const(Mat *m, size_t row, float val);
+void mat_col_div_const(Mat *m, size_t col, float val);
+void mat_row_prod_const(Mat *m, size_t row, float val);
+void mat_col_prod_const(Mat *m, size_t col, float val);
+void mat_row_sum(Mat *a, Mat *b, size_t row_1, size_t row_2);
+void mat_col_sum(Mat *a, Mat *b, size_t col_1, size_t col_2);
+void mat_row_sub(Mat *a, Mat *b, size_t row_1, size_t row_2);
+void mat_col_sub(Mat *a, Mat *b, size_t col_1, size_t col_2);
+void mat_row_div(Mat *a, Mat *b, size_t row_1, size_t row_2);
+void mat_col_div(Mat *a, Mat *b, size_t col_1, size_t col_2);
+void mat_row_prod(Mat *a, Mat *b, size_t row_1, size_t row_2);
+void mat_col_prod(Mat *a, Mat *b, size_t col_1, size_t col_2);
 Mat **mat_split_rows(const Mat *m, float x);
 Mat **mat_split_cols(const Mat *m, float x);
 void mat_copy(Mat *dst, const Mat *src);
@@ -60,8 +74,8 @@ void mat_swap_cols(Mat *m, size_t col_1, size_t col_2);
 
 Mat *mat_append_rows(const Mat *a, const Mat *b);
 Mat *mat_append_cols(const Mat *a, const Mat *b);
-Mat *mat_col_sum(const Mat *m);
-Mat *mat_row_sum(const Mat *m);
+Mat *mat_col_collapse_sum(const Mat *m);
+Mat *mat_row_collapse_sum(const Mat *m);
 Mat *mat_SS(const Mat *a, const Mat *b);
 Mat *mat_SS_const(const Mat *a, float x);
 Mat *mat_trans(const Mat *m);
@@ -179,6 +193,175 @@ Mat mat_row(const Mat *m, size_t row) {
         .ref_count = 0, // Views don't own memory
     };
 }
+
+/* 
+    Adds a constant value to all elements in the specified row 
+*/
+void mat_row_sum_const(Mat *m, size_t row, float val){
+    MAT_ASSERT(row < m->rows);
+    for (size_t j = 0; j < m->cols; j++){
+        MAT_AT(m, row, j) += val;
+    }
+}
+
+/*
+    Adds a constant value to all elements in the specified column
+*/
+void mat_col_sum_const(Mat *m, size_t col, float val){
+    MAT_ASSERT(col < m->cols);
+    for (size_t i = 0; i < m->rows; i++){
+        MAT_AT(m, i, col) += val;
+    }
+}
+
+/*
+    Multiplies all elements in the specified row by a constant value
+*/
+void mat_row_prod_const(Mat *m, size_t row, float val){
+    MAT_ASSERT(row < m->rows);
+    for (size_t j = 0; j < m->cols; j++){
+        MAT_AT(m, row, j) *= val;
+    }
+}
+
+/*
+    Multiplies all elements in the specified column by a constant value
+*/
+void mat_col_prod_const(Mat *m, size_t col, float val){
+    MAT_ASSERT(col < m->cols);
+    for (size_t i = 0; i < m->rows; i++){
+        MAT_AT(m, i, col) *= val;
+    }
+}
+
+/*
+    Divides all elements in the specified row by a constant value
+*/
+void mat_row_div_const(Mat *m, size_t row, float val){
+    MAT_ASSERT(val != 0.0);
+    MAT_ASSERT(row < m->rows);
+    for (size_t j = 0; j < m->cols; j++){
+        MAT_AT(m, row, j) /= val;
+    }
+}
+
+/*
+    Divides all elements in the specified column by a constant value
+*/
+void mat_col_div_const(Mat *m, size_t col, float val){
+    MAT_ASSERT(val != 0.0);
+    MAT_ASSERT(val < m->cols);
+    for (size_t i = 0; i < m->rows; i++){
+        MAT_AT(m, i, col) /= val;
+    }
+}
+
+
+
+/* 
+    Adds a constant value to all elements in the specified row 
+*/
+void mat_row_sum(Mat *a, Mat *b, size_t row_1, size_t row_2){
+    MAT_ASSERT(a->cols == b->cols);
+    MAT_ASSERT(a->rows > row_1);
+    MAT_ASSERT(b->rows > row_2);
+
+    for (size_t j = 0; j < a->cols; j++){
+        MAT_AT(a, row_1, j) += MAT_AT(b, row_2, j);
+    }
+}
+
+/*
+    Adds a constant value to all elements in the specified column
+*/
+void mat_col_sum(Mat *a, Mat *b, size_t col_1, size_t col_2){
+    MAT_ASSERT(a->rows == b->rows);
+    MAT_ASSERT(a->cols > col_1);
+    MAT_ASSERT(b->cols > col_2);
+
+
+    for (size_t i = 0; i < a->rows; i++){
+        MAT_AT(a, i, col_1) += MAT_AT(b, i, col_2);
+    }
+}
+
+/* 
+    Adds a constant value to all elements in the specified row 
+*/
+void mat_row_sub(Mat *a, Mat *b, size_t row_1, size_t row_2){
+    MAT_ASSERT(a->cols == b->cols);
+    MAT_ASSERT(a->rows > row_1);
+    MAT_ASSERT(b->rows > row_2);
+
+    for (size_t j = 0; j < a->cols; j++){
+        MAT_AT(a, row_1, j) -= MAT_AT(b, row_2, j);
+    }
+}
+
+/*
+    Adds a constant value to all elements in the specified column
+*/
+void mat_col_sub(Mat *a, Mat *b, size_t col_1, size_t col_2){
+    MAT_ASSERT(a->rows == b->rows);
+    MAT_ASSERT(a->cols > col_1);
+    MAT_ASSERT(b->cols > col_2);
+
+
+    for (size_t i = 0; i < a->rows; i++){
+        MAT_AT(a, i, col_1) -= MAT_AT(b, i, col_2);
+    }
+}
+
+
+/*
+    Multiplies all elements in the specified row by a constant value
+*/
+void mat_row_prod(Mat *a, Mat *b, size_t row_1, size_t row_2){
+    MAT_ASSERT(a->cols == b->cols);
+    MAT_ASSERT(a->rows > row_1);
+    MAT_ASSERT(b->rows > row_2);
+    for (size_t j = 0; j < a->cols; j++){
+        MAT_AT(a, row_1, j) *= MAT_AT(b, row_2, j);
+    }
+}
+
+/*
+    Multiplies all elements in the specified column by a constant value
+*/
+void mat_col_prod(Mat *a, Mat *b, size_t col_1, size_t col_2){
+    MAT_ASSERT(a->rows == b->rows);
+    MAT_ASSERT(a->cols > col_1);
+    MAT_ASSERT(b->cols > col_2);
+    for (size_t i = 0; i < a->rows; i++){
+        MAT_AT(a, i, col_1) *= MAT_AT(b, i, col_2);
+    }
+}
+
+/*
+    Divides all elements in the specified row by a constant value
+*/
+void mat_row_div(Mat *a, Mat *b, size_t row_1, size_t row_2){
+    MAT_ASSERT(a->cols == b->cols);
+    MAT_ASSERT(a->rows > row_1);
+    MAT_ASSERT(b->rows > row_2);
+    for (size_t j = 0; j < a->cols; j++){
+        MAT_AT(a, row_1, j) /= MAT_AT(b, row_2, j);
+    }
+}
+
+/*
+    Divides all elements in the specified column by a constant value
+*/
+void mat_col_div(Mat *a, Mat *b, size_t col_1, size_t col_2){
+    MAT_ASSERT(a->rows == b->rows);
+    MAT_ASSERT(a->cols > col_1);
+    MAT_ASSERT(b->cols > col_2);
+
+    for (size_t i = 0; i < a->rows; i++){
+        MAT_AT(a, i, col_1) /= MAT_AT(b, i, col_2);
+    }
+}
+
 
 /*
     Copy all of the matrix 'src' values to the 'dst' matrix in place. Both matrices must have the same dimensions.
@@ -508,7 +691,7 @@ Mat *mat_SS(const Mat *a, const Mat *b){
     mat_copy(res, a);
     mat_nsum(res, b);
     mat_exp(res, 2);
-    Mat *o = mat_row_sum(res);
+    Mat *o = mat_row_collapse_sum(res);
     mat_release(res);
     return o;
 }
@@ -521,7 +704,7 @@ Mat *mat_SS_const(const Mat *a, float x){
     mat_copy(res, a);
     mat_sum_const(res, -x);
     mat_exp(res, 2);
-    Mat *o = mat_row_sum(res);
+    Mat *o = mat_row_collapse_sum(res);
     mat_release(res);
     return o;
 }
@@ -529,7 +712,7 @@ Mat *mat_SS_const(const Mat *a, float x){
 /*
     from RxC to 1xC for each col, sum across all rows.
 */
-Mat *mat_col_sum(const Mat *m) {
+Mat *mat_col_collapse_sum(const Mat *m) {
     Mat *col_m = mat_alloc(1, m->cols);
 
     for (size_t j = 0; j < m->cols; j++){
@@ -546,7 +729,7 @@ Mat *mat_col_sum(const Mat *m) {
 /*
     from RxC to Rx1 for each row, sum across all cols.
 */
-Mat *mat_row_sum(const Mat *m) {
+Mat *mat_row_collapse_sum(const Mat *m) {
     Mat *row_m = mat_alloc(1, m->rows);
 
     for (size_t i = 0; i < m->rows; i ++){
@@ -563,7 +746,7 @@ Mat *mat_row_sum(const Mat *m) {
     Mean of each row.
 */
 Mat *mat_row_mean(const Mat *m){
-    Mat *o = mat_row_sum(m);
+    Mat *o = mat_row_collapse_sum(m);
     MAT_ASSERT(m->rows != 0);
     mat_div_const(o, m->cols);
     return o;
@@ -573,7 +756,7 @@ Mat *mat_row_mean(const Mat *m){
     Mean of each col
 */
 Mat* mat_col_mean(const Mat *m){
-    Mat *o = mat_col_sum(m);
+    Mat *o = mat_col_collapse_sum(m);
     MAT_ASSERT(m->rows != 0);
     mat_div_const(o, m->rows);
     return o;
@@ -585,15 +768,67 @@ Mat* mat_col_mean(const Mat *m){
 Mat *mat_inverse_GJ(const Mat *m){
     MAT_ASSERT(m->rows == m->cols);
     size_t dim = m->rows;
+    
+    // Create Identity
     Mat *m_id = mat_alloc(dim, dim);
     mat_zeros(m_id);
-    mat_fill_diag(m_id, 1.0);
-    // Augmented matrix
+    mat_fill_diag(m_id, 1.0f);
+    
+    // Create Augmented Matrix
     Mat *m_aug = mat_append_cols(m, m_id);
-    mat_release(m_id);
+    mat_release(m_id); 
 
-    return m_aug;
+    for(size_t j = 0; j < dim; j++){
+        
+        // Move and select pivots
+        float max_val = fabs(MAT_AT(m_aug, j, j));
+        size_t idx = j;
+        
+        for(size_t i = j+1; i < dim; i++){
+            float abs_val = fabs(MAT_AT(m_aug, i, j));
+            if(abs_val > max_val){
+                max_val = abs_val;
+                idx = i;
+            }
+        }
+        
+        MAT_ASSERT(max_val > 1e-6);
+        
+        if(idx != j){
+            mat_swap_rows(m_aug, idx, j);
+        }
+
+        // Normalize the pivot
+        float pivot = MAT_AT(m_aug, j, j);
+        mat_row_div_const(m_aug, j, pivot);
+        
+        // Set to zero the values outside the diagonal
+        for(size_t i = 0; i < dim; i++){
+            // Skip the pivot row itself
+            if(i == j) continue;
+            
+            float factor = MAT_AT(m_aug, i, j);
+            
+            if(fabs(factor) < 1e-6) continue; 
+
+            // we perform: Row_i = Row_i - (factor * Row_j)
+            for(size_t k = 0; k < m_aug->cols; k++){
+                MAT_AT(m_aug, i, k) -= factor * MAT_AT(m_aug, j, k);
+            }
+        
+        }
+    }
+
+    Mat *inv = mat_alloc(dim, dim);
+    for(size_t i = 0; i < dim; i++){
+        for(size_t k = 0; k < dim; k++){
+            // The inverse is in the right half (columns dim to 2*dim)
+            MAT_AT(inv, i, k) = MAT_AT(m_aug, i, k + dim);
+        }
+    }
+    
+    mat_release(m_aug);
+    return inv;
 }
-
 
 #endif

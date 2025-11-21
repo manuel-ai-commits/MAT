@@ -50,11 +50,19 @@ int main () {
     MAT_PRINT(m_app_c);
     mat_release(m_app_c);
     mat_release(b);
-    Mat *try = mat_inverse_GJ(m);
-    MAT_PRINT(try);
-    mat_release(try);
+
+
     mat_swap_cols(m, 1, 2);
     MAT_PRINT(m);
+    Mat *try = mat_inverse_GJ(m);
+    MAT_PRINT(try);
+    Mat *m_dot1 = mat_alloc(ROWS, COLS);
+    mat_dot(m_dot1, m, try);
+    MAT_PRINT(m_dot1);
+    
+    mat_release(try);
+
+    
 
     mat_release(m);
 
