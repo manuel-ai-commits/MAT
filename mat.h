@@ -781,13 +781,13 @@ Mat *mat_inverse_GJ(const Mat *m){
     for(size_t j = 0; j < dim; j++){
         
         // Move and select pivots
-        float max_val = fabs(MAT_AT(m_aug, j, j));
+        float max_val = MAT_AT(m_aug, j, j);
         size_t idx = j;
         
         for(size_t i = j+1; i < dim; i++){
-            float abs_val = fabs(MAT_AT(m_aug, i, j));
-            if(abs_val > max_val){
-                max_val = abs_val;
+            float val = MAT_AT(m_aug, i, j);
+            if(val > max_val){
+                max_val = val;
                 idx = i;
             }
         }

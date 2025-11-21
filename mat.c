@@ -6,7 +6,7 @@
 #define ROWS 3
 #define COLS 3
 
-int main () {
+int main (void) {
     Mat *m = mat_alloc(ROWS, COLS);
     MAT_PRINT(m);
     mat_ones(m);
@@ -29,13 +29,13 @@ int main () {
     Mat *m_col = mat_col_mean(m);
     MAT_PRINT(m_col);
     mat_release(m_col);
-    Mat **out_row = mat_split_rows(m, 0.7);
+    Mat **out_row = mat_split_rows(m, 0.7f);
     MAT_PRINT(out_row[0]);
     MAT_PRINT(out_row[1]);
     mat_release(out_row[0]);
     mat_release(out_row[1]);
     free(out_row);
-    Mat **out_col = mat_split_cols(m, 0.7);
+    Mat **out_col = mat_split_cols(m, 0.7f);
     MAT_PRINT(out_col[0]);
     MAT_PRINT(out_col[1]);
     mat_release(out_col[0]);
@@ -68,3 +68,4 @@ int main () {
 
     return 0;
 }
+
